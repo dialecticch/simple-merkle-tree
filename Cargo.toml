@@ -8,7 +8,7 @@ license = "MIT"
 authors = [
     "Roberts Ivanovs <robertsivanovs1999@gmail.com>",
 ]
-keywords = ["merkle", "tree", "merkletree", "keccak256", "proof", "root"]
+keywords = ["merkle", "tree", "merkletree", "proof", "root"]
 description = "Easy to use replica of Solidity abi.encodePacked."
 
 [dependencies]

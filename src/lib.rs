@@ -1,3 +1,43 @@
+//! Simple Merkle Tree implementation
+//!
+//! To be used hand-in-hand with Solidity, that's why it's using `keccak256` for hashing!
+//! Example usage
+//! ```rust
+//! use simple_merkle_tree::MerkleTree;
+//! let elements = (0..4)
+//!     .map(|el| format!("item-string-{:}", el).into_bytes())
+//!     .collect::<Vec<Vec<u8>>>();
+//!
+//! let tree = MerkleTree::new(elements.clone());
+//! let a = &elements[0];
+//! let b = &elements[1];
+//! let c = &elements[2];
+//! let d = &elements[3];
+//!
+//! let h_a = MerkleTree::hash(a); // Part of the proof
+//! let h_b = MerkleTree::hash(b);
+//! let h_c = MerkleTree::hash(c); // Part of the proof
+//! let h_d = MerkleTree::hash(d); // Part of the proof
+//! let h_ab = MerkleTree::combined_hash(&h_a, &h_b); // Part of the proof
+//! let h_cd = MerkleTree::combined_hash(&h_c, &h_d);
+//! let h_abcd = MerkleTree::combined_hash(&h_ab, &h_cd);
+//!
+//! let proof = tree.get_proof(d).unwrap();
+//! assert_eq!(proof.len(), 2);
+//!
+//! assert_eq!(
+//!     vec![hex::encode(h_c), hex::encode(h_ab),],
+//!     proof
+//!         .iter()
+//!         .map(|e| hex::encode(e))
+//!         .collect::<Vec<String>>()
+//! );
+//!
+//! let root = tree.get_root();
+//! assert_eq!(hex::encode(h_abcd), hex::encode(root));
+//! ```
+
+
 use std::fmt::Debug;
 
 pub use tiny_keccak::Hasher;
@@ -5,6 +45,7 @@ pub use tiny_keccak::Hasher;
 pub type Buffer = Vec<u8>;
 type Hash = [u8; 32];
 
+/// Merkle tree implementation using
 pub struct MerkleTree {
     hashed_elements: Vec<Hash>,
 }
@@ -128,13 +169,45 @@ impl MerkleTree {
 
 }
 
-// Private helper impl
+// Different helpers
 impl MerkleTree {
 
-    fn combined_hash(first: &[u8], second: &[u8]) -> [u8; 32] {
+    /// Create a hash of two byte array slices
+    ///```rust
+    /// use simple_merkle_tree::MerkleTree;
+    /// let elements = (0..3)
+    ///     .map(|el| format!("item-string-{:}", el).into_bytes())
+    ///     .collect::<Vec<Vec<u8>>>();
+    ///
+    /// let a = &elements[0];
+    /// let b = &elements[1];
+    /// let h_a = MerkleTree::hash(a);
+    /// let h_b = MerkleTree::hash(b);
+    /// let h_ab = MerkleTree::combined_hash(&h_a, &h_b);
+    ///```
+    pub fn combined_hash(first: &[u8], second: &[u8]) -> [u8; 32] {
         let mut keccak = tiny_keccak::Keccak::v256();
         keccak.update(first);
         keccak.update(second);
+        let mut result: [u8; 32] = Default::default();
+        keccak.finalize(&mut result);
+        result
+    }
+
+    /// Create a hash of a single byte array slice
+    ///```rust
+    /// use simple_merkle_tree::MerkleTree;
+    /// let elements = (0..3)
+    ///     .map(|el| format!("item-string-{:}", el).into_bytes())
+    ///     .collect::<Vec<Vec<u8>>>();
+    ///
+    /// let a = &elements[0];
+    ///
+    /// let h_a = MerkleTree::hash(a);
+    ///```
+    pub fn hash(data: &[u8]) -> [u8; 32] {
+        let mut keccak = tiny_keccak::Keccak::v256();
+        keccak.update(&data);
         let mut result: [u8; 32] = Default::default();
         keccak.finalize(&mut result);
         result
@@ -171,13 +244,6 @@ impl MerkleTree {
         (child_idx - child_offset) / 2
     }
 
-    fn hash(data: &[u8]) -> [u8; 32] {
-        let mut keccak = tiny_keccak::Keccak::v256();
-        keccak.update(&data);
-        let mut result: [u8; 32] = Default::default();
-        keccak.finalize(&mut result);
-        result
-    }
 
     fn calculate_levels(el_len: &usize) -> (usize, u32) {
         let capacity = 2 * el_len - 1;

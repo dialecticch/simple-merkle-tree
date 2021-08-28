@@ -3,6 +3,14 @@ name = "simple-merkle-tree"
 version = "0.1.0"
 edition = "2018"
 
+homepage = "https://github.com/roberts-ivanovs/simple-merkle-tree"
+license = "MIT"
+authors = [
+    "Roberts Ivanovs <robertsivanovs1999@gmail.com>",
+]
+keywords = ["merkle", "tree", "merkletree", "keccak256", "proof", "root"]
+description = "Easy to use replica of Solidity abi.encodePacked."
+
 [dependencies]
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 hex = "0.4.3"

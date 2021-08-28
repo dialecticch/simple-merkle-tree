@@ -1,14 +1,15 @@
-use std::{collections::HashMap, fmt::Debug, io::Read, ops::Index};
+use std::fmt::Debug;
 
-use tiny_keccak::Hasher;
+pub use tiny_keccak::Hasher;
 
-type Buffer = Vec<u8>;
+pub type Buffer = Vec<u8>;
 type Hash = [u8; 32];
 
 pub struct MerkleTree {
     hashed_elements: Vec<Hash>,
 }
 
+// Public interface impl
 impl MerkleTree {
     pub fn new(elements: Vec<Buffer>) -> Self {
         let elements = {
@@ -88,20 +89,12 @@ impl MerkleTree {
         res
     }
 
-    fn combined_hash(first: &[u8], second: &[u8]) -> [u8; 32] {
-        let mut keccak = tiny_keccak::Keccak::v256();
-        keccak.update(first);
-        keccak.update(second);
-        let mut result: [u8; 32] = Default::default();
-        keccak.finalize(&mut result);
-        result
-    }
 
-    fn get_root(&self) -> &[u8; 32] {
+    pub fn get_root(&self) -> &[u8; 32] {
         &self.hashed_elements[0]
     }
 
-    fn get_proof(&self, el: &Buffer) -> Option<Vec<&[u8; 32]>> {
+    pub fn get_proof(&self, el: &Buffer) -> Option<Vec<&[u8; 32]>> {
         let hashed = MerkleTree::hash(&el);
         log::debug!("Finding proof for {:}", hex::encode(hashed));
 
@@ -131,6 +124,20 @@ impl MerkleTree {
             }
             None => None,
         }
+    }
+
+}
+
+// Private helper impl
+impl MerkleTree {
+
+    fn combined_hash(first: &[u8], second: &[u8]) -> [u8; 32] {
+        let mut keccak = tiny_keccak::Keccak::v256();
+        keccak.update(first);
+        keccak.update(second);
+        let mut result: [u8; 32] = Default::default();
+        keccak.finalize(&mut result);
+        result
     }
 
     fn get_pair_element(&self, idx: usize) -> Option<&[u8; 32]> {

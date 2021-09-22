@@ -77,7 +77,7 @@ impl MerkleTree {
         };
 
         // Construct hashes
-        let el_len = elements.len();
+        let el_len = elements.len().next_power_of_two();
         let (capacity, levels) = MerkleTree::calculate_levels(&el_len);
 
         let mut result = vec![[0; 32]; capacity];
@@ -218,7 +218,7 @@ impl MerkleTree {
 
     fn get_pair_element(&self, idx: usize) -> Option<&[u8; 32]> {
         let pair_idx = MerkleTree::calculate_sibling_idx(idx);
-
+        log::trace!("Pair index for {} is {}", idx, pair_idx);
         if pair_idx < self.hashed_elements.len() {
             return Some(&self.hashed_elements[pair_idx]);
         }
@@ -318,6 +318,82 @@ mod tests {
 
             assert_eq!(
                 vec![hex::encode(h_c), hex::encode(h_ab),],
+                proof
+                    .iter()
+                    .map(|e| hex::encode(e))
+                    .collect::<Vec<String>>()
+            );
+        }
+
+        {
+            let proof = tree.get_proof(a).unwrap();
+            assert_eq!(proof.len(), 2);
+
+            assert_eq!(
+                vec![hex::encode(h_b), hex::encode(h_cd),],
+                proof
+                    .iter()
+                    .map(|e| hex::encode(e))
+                    .collect::<Vec<String>>()
+            );
+        }
+        {
+            let root = tree.get_root();
+            assert_eq!(hex::encode(h_abcd), hex::encode(root));
+        }
+    }
+    #[test]
+    fn construct_tree_uneven() {
+        simple_logger::init_with_level(log::Level::Trace).unwrap();
+        let elements = generate_sample_vec(5);
+        let tree = MerkleTree::new(elements.clone());
+        let empty: [u8; 32] = Default::default();
+
+        let a = &elements[0];
+        let b = &elements[1];
+        let c = &elements[2];
+        let d = &elements[3];
+        let e = &elements[3];
+
+        let h_a = MerkleTree::hash(a);
+        let h_b = MerkleTree::hash(b);
+        let h_c = MerkleTree::hash(c);
+        let h_d = MerkleTree::hash(d);
+        let h_e = MerkleTree::hash(e);
+        let h_01 = MerkleTree::hash(&empty);
+        let h_02 = MerkleTree::hash(&empty);
+        let h_03 = MerkleTree::hash(&empty);
+
+        let h_ab = MerkleTree::combined_hash(&h_a, &h_b);
+        let h_cd = MerkleTree::combined_hash(&h_c, &h_d);
+        let h_e01 = MerkleTree::combined_hash(&h_e, &h_01);
+        let h_0203 = MerkleTree::combined_hash(&h_02, &h_03);
+
+        let h_abcd = MerkleTree::combined_hash(&h_ab, &h_cd);
+        let h_e010203 = MerkleTree::combined_hash(&h_e01, &h_0203);
+
+        let h_abcde010203 = MerkleTree::combined_hash(&h_abcd, &h_e010203);
+
+        log::debug!("h_abcde010203 = {:}", hex::encode(h_abcde010203));
+        log::debug!("h_abcd = {:}", hex::encode(h_abcd));
+        log::debug!("h_e010203 = {:}", hex::encode(h_e010203));
+
+        log::debug!("h_ab = {:}", hex::encode(h_ab));
+        log::debug!("h_cd = {:}", hex::encode(h_cd));
+        log::debug!("h_e01 = {:}", hex::encode(h_e01));
+
+        log::debug!("h_a = {:}", hex::encode(h_a));
+        log::debug!("h_b = {:}", hex::encode(h_b));
+        log::debug!("h_c = {:}", hex::encode(h_c));
+        log::debug!("h_d = {:}", hex::encode(h_d));
+        log::debug!("h_e = {:}", hex::encode(h_e));
+
+        {
+            let proof = tree.get_proof(d).unwrap();
+            assert_eq!(proof.len(), 3);
+
+            assert_eq!(
+                vec![hex::encode(h_c), hex::encode(h_ab), hex::encode(h_ab), hex::encode(h_e010203)],
                 proof
                     .iter()
                     .map(|e| hex::encode(e))

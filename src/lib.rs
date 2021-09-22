@@ -80,17 +80,21 @@ impl MerkleTree {
         let el_len = elements.len();
         let (capacity, levels) = MerkleTree::calculate_levels(&el_len);
 
-        let vector_size = 2 * el_len - 1;
-        let mut result = vec![[0; 32]; vector_size];
-        log::debug!("Creating a vector with size {:}", vector_size);
+        let mut result = vec![[0; 32]; capacity];
+        log::debug!("Creating a vector with size {:}", capacity);
 
-        let mut prior_elements = 0;
         for level in 1..=levels {
             let elem_count_in_level = el_len / level as usize;
-            let start_index = capacity - prior_elements - elem_count_in_level;
+            log::trace!(
+                "level: {}| capacity: {}| elem_count_in_level {}",
+                level,
+                capacity,
+                elem_count_in_level,
+            );
+            let inverse_level = levels - level;
+            let start_index = 2_usize.pow(inverse_level) - 1;
 
             let end_index = start_index + elem_count_in_level; // non inclusive
-            prior_elements += elem_count_in_level;
             log::trace!(
                 "start_index: {}| end_index {}| elem_count_in_level {}",
                 start_index,
@@ -117,7 +121,6 @@ impl MerkleTree {
                     let left = result[left];
                     let right = result[right];
                     let parent = MerkleTree::combined_hash(&left, &right);
-                    // log::trace!("Setting idx {:} to {:}", start_index + idx, hex::encode(parent));
                     result[idx] = parent;
                 }
             }
@@ -246,7 +249,7 @@ impl MerkleTree {
 
 
     fn calculate_levels(el_len: &usize) -> (usize, u32) {
-        let capacity = 2 * el_len - 1;
+        let capacity = (2 * el_len).next_power_of_two() - 1;
         let levels: u32 = ((capacity as f32).log2() + 1.) as u32;
         (capacity, levels)
     }
@@ -339,6 +342,21 @@ mod tests {
             assert_eq!(hex::encode(h_abcd), hex::encode(root));
         }
     }
+    #[test]
+    fn construct_tree_different_elements() {
+        simple_logger::init_with_level(log::Level::Trace).unwrap();
+        log::debug!("6 elements");
+        let elements = generate_sample_vec(6);
+        MerkleTree::new(elements.clone());
+
+        log::debug!("2 elements");
+        let elements = generate_sample_vec(2);
+        MerkleTree::new(elements.clone());
+
+        log::debug!("3 elements");
+        let elements = generate_sample_vec(3);
+        MerkleTree::new(elements.clone());
+    }
 
     #[test]
     fn levels_get_calculated() {
@@ -350,12 +368,24 @@ mod tests {
     fn levels_get_calculated_v2() {
         let elements = generate_sample_vec(3);
         let levels = MerkleTree::calculate_levels(&elements.len());
-        assert_eq!(levels, (5, 3));
+        assert_eq!(levels, (7, 3));
     }
     #[test]
     fn levels_get_calculated_v3() {
         let elements = generate_sample_vec(2);
         let levels = MerkleTree::calculate_levels(&elements.len());
         assert_eq!(levels, (3, 2));
+    }
+    #[test]
+    fn levels_get_calculated_v4() {
+        let elements = generate_sample_vec(6);
+        let levels = MerkleTree::calculate_levels(&elements.len());
+        assert_eq!(levels, (15, 4));
+    }
+    #[test]
+    fn levels_get_calculated_v5() {
+        let elements = generate_sample_vec(5);
+        let levels = MerkleTree::calculate_levels(&elements.len());
+        assert_eq!(levels, (15, 4));
     }
 }

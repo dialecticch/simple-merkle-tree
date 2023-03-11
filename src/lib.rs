@@ -190,8 +190,14 @@ impl MerkleTree {
     ///```
     pub fn combined_hash(first: &[u8], second: &[u8]) -> [u8; 32] {
         let mut keccak = tiny_keccak::Keccak::v256();
-        keccak.update(first);
-        keccak.update(second);
+
+        if first < second{
+            keccak.update(first);
+            keccak.update(second);
+        }else{
+            keccak.update(second);
+            keccak.update(first);
+        }
         let mut result: [u8; 32] = Default::default();
         keccak.finalize(&mut result);
         result
